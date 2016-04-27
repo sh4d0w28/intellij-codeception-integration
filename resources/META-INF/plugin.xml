@@ -1,0 +1,26 @@
+<idea-plugin version="2">
+  <id>com.sh4d0w28.intellij_codeception_integration</id>
+  <name>Codecept integration plugin</name>
+  <version>1.0</version>
+  <vendor email="vfrcbvrf2005@gmail.com" url="http://www.linkedin.com/edush"></vendor>
+
+  <description><![CDATA[
+    First version of plugin. Allow to get test suites and run tests on simple click
+    ]]></description>
+
+  <change-notes><![CDATA[
+    ]]>
+  </change-notes>
+
+  <idea-version since-build="141.0"/>
+  <depends>com.intellij.modules.lang</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="FormMain" anchor="right" factoryClass="FormMain"/>
+  </extensions>
+
+  <actions>
+    <!-- Add your actions here -->
+  </actions>
+
+</idea-plugin>
