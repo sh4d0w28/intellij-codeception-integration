@@ -8,9 +8,34 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class DirWorker {
+
+    static File findDirectory(File parentDirectory, String folderToFind, @Nullable File result) {
+        if (result != null) {
+            return result;
+        }
+
+        File[] files = parentDirectory.listFiles();
+        for (File file : files != null ? files : new File[0]) {
+            if (file.isFile()) {
+                continue;
+            }
+            if (file.getName().equals(folderToFind)) {
+                result = file;
+                break;
+            }
+            if(file.isDirectory()) {
+                result = findDirectory(file, folderToFind, result);
+            }
+        }
+        return result;
+    }
+
     static DefaultMutableTreeNode getDirContent(File testDir, DefaultMutableTreeNode root, @Nullable File baseDir, @Nullable File codeceptFile) {
         File[] elements = testDir.listFiles();
-        for(File file : elements) {
+        for(File file : elements != null ? elements : new File[0]) {
+            if(file.getName().startsWith("_")) {
+                continue;
+            }
             if(file.isFile() && file.getName().contains("Cest")) {
                 TestNode tnode = new TestNode(file.getName(), MyIcons.FILE_ICON, file, baseDir, codeceptFile);
                 DefaultMutableTreeNode node = new DefaultMutableTreeNode(tnode);

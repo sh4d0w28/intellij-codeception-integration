@@ -1,6 +1,3 @@
-import com.intellij.icons.AllIcons;
-import com.intellij.openapi.util.IconLoader;
-
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
