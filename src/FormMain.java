@@ -20,7 +20,6 @@ public class FormMain implements ToolWindowFactory {
     {
         TreeWorker.refreshData(jtMain);
         jtMain.setCellRenderer(new MyTreeCellRenderer());
-        jtMain.addMouseListener(new MyMouseAdapter());
     }
 
     private void initButton()
