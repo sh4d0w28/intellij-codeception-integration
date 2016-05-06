@@ -9,22 +9,18 @@ import java.util.regex.Pattern;
 
 class DirWorker {
 
-    static File findDirectory(File parentDirectory, String folderToFind, @Nullable File result) {
+    static File findFile(File parentDirectory, String filenameToFind, @Nullable File result) {
         if (result != null) {
             return result;
         }
-
-        File[] files = parentDirectory.listFiles();
-        for (File file : files != null ? files : new File[0]) {
-            if (file.isFile()) {
-                continue;
-            }
-            if (file.getName().equals(folderToFind)) {
-                result = file;
+        File[] folderContent = parentDirectory.listFiles();
+        for (File item : folderContent != null ? folderContent : new File[0]) {
+            if (item.isFile() && item.getName().equals(filenameToFind)) {
+                result = item;
                 break;
             }
-            if(file.isDirectory()) {
-                result = findDirectory(file, folderToFind, result);
+            if(item.isDirectory()) {
+                result = findFile(item, filenameToFind, result);
             }
         }
         return result;

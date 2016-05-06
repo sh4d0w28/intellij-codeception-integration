@@ -4,6 +4,7 @@ import com.intellij.openapi.project.ProjectManager;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -23,7 +24,8 @@ class TestNode {
 
     private Notification notification;
 
-    private static final NotificationGroup GROUP_DISPLAY_ID_INFO = new NotificationGroup("My notification group", NotificationDisplayType.BALLOON, true);
+    private static final NotificationGroup GROUP_DISPLAY_BALOON_INFO = new NotificationGroup("My notification group", NotificationDisplayType.BALLOON, true);
+    private static final NotificationGroup GROUP_DISPLAY_CONSOLE_INFO = new NotificationGroup("My notification group", NotificationDisplayType.NONE, true);
 
     TestNode(String oTitle, Icon oIcon, Object oPayload, @Nullable File oBaseDir, @Nullable File oCodeceptYml)
     {
@@ -34,96 +36,144 @@ class TestNode {
         codeceptYml = oCodeceptYml;
     }
 
+    public Object getPayload() { return payload; }
+
+    public String getTitle()
+    {
+        return title;
+    }
+
     @Override
     public String toString()
     {
         return prefix + " " + title;
     }
 
-    Object React(String suite)
+    Object React(String suite, DefaultMutableTreeNode node)
     {
         prefix = "[...]";
 
         Project[] projects = ProjectManager.getInstance().getOpenProjects();
 
-        if((codeceptYml == null || payload == null) && icon == MyIcons.FOLDER_ICON)
-        {
-            return null;
+        if ((codeceptYml == null || payload == null)) {
+            int childs = node.getChildCount();
+            for (int i=0; i<childs; i++) {
+                DefaultMutableTreeNode childnode = (DefaultMutableTreeNode)node.getChildAt(i);
+                TestNode testnode = (TestNode)childnode.getUserObject();
+                testnode.prefix = "[...]";
+            }
+            for (int i=0; i<childs; i++) {
+                DefaultMutableTreeNode childnode = (DefaultMutableTreeNode)node.getChildAt(i);
+                TestNode testnode = (TestNode)childnode.getUserObject();
+                if(testnode.icon != MyIcons.ACTION_ICON) {
+                    testnode.React(suite, childnode);
+                }
+            }
+            prefix = "";
+            return payload;
         }
+
         try {
-            List<String> commands = new ArrayList<>();
-            commands.add("../vendor/bin/codecept");
+            boolean itWasOk = true;
+            String currentTest = "";
+            String line, previous = null;
+            boolean waitForResult = false;
+            StringBuilder out = new StringBuilder();
+            ArrayList<String> passed = new ArrayList<>();
+            ArrayList<String> failed = new ArrayList<>();
+            String path = codeceptYml.getParentFile().getPath();
+            ProcessBuilder pb = null;
+            List commands = new ArrayList();
+
+            commands.add("vendor/bin/codecept");
             commands.add("run");
+            commands.add("--no-ansi");
+            commands.add("-d");
+            commands.add("--no-interaction");
             commands.add("--no-colors");
-            commands.add("-c" + codeceptYml.getAbsolutePath());
             commands.add(suite);
+
+            String mode = "action";
             if (icon == MyIcons.ACTION_ICON) {
                 commands.add(payload.toString() + ":" + this.title);
             } else {
+                mode = "pack";
                 commands.add(payload.toString());
             }
-            StringBuilder sb = new StringBuilder();
-            for(String s : commands) {
-                sb.append(s);
-                sb.append(' ');
-            }
 
-            notification = GROUP_DISPLAY_ID_INFO.createNotification(sb.toString(), NotificationType.ERROR);
+            String outcommand = "";
+            for (Object s : commands)
+            {
+                outcommand += s.toString() + " ";
+            }
+            out.append(outcommand);
+            notification = GROUP_DISPLAY_CONSOLE_INFO.createNotification(out.toString(), NotificationType.INFORMATION);
             Notifications.Bus.notify(notification, projects[0]);
 
+            out = new StringBuilder();
 
-            ProcessBuilder pb = new ProcessBuilder(commands);
-            pb.directory(baseDir);
+            pb = new ProcessBuilder(commands);
+            pb.directory(codeceptYml.getParentFile());
             pb.redirectErrorStream(true);
             Process process = pb.start();
-
-            StringBuilder out = new StringBuilder();
             BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line, previous = null;
-            boolean itWasOk = true;
-            Pattern pattern = Pattern.compile("([I|E|✔]) ([A-Za-z0-9]+): (\\w+)");
             while((line = br.readLine()) != null) {
                 if (!line.equals(previous)) {
                     previous = line;
                     if(line.contains("Exception")) {
                         itWasOk = false;
                     }
-                    Matcher matcher = pattern.matcher(line);
-                    if (matcher.find()) {
-                        String s = "T";
-                        //if(matcher.groupCount() == 1) {
-                        //    tnode = new TestNode(matcher.group(1), MyIcons.ACTION_ICON, file, baseDir, codeceptFile);
-                        //    node.add(new DefaultMutableTreeNode(tnode));
-                        //}
+                    if(line.startsWith("Test: ")) {
+                        currentTest = line.replace("Test: ", "");
+                        waitForResult = true;
                     }
-/*
-
-I CourseTypeCest: Test save from request
-✔ BlockCest: Test find (0.1s)
-✔ BlockCest: Test get by page and name (0.2s)
-E BlockCest: Test add field
-
-
- */
-
-
-                    out.append(line).append('\n');
-                    System.out.println(line);
+                    if(line.startsWith(" PASSED") && waitForResult) {
+                        waitForResult = false;
+                        passed.add(path + "/" + currentTest);
+                        out.append(currentTest + line + "\n");
+                    } else if (line.startsWith(" FAIL") && waitForResult) {
+                        waitForResult = false;
+                        failed.add(path + "/" + currentTest);
+                        out.append(currentTest + line + "\n");
+                    }
                 }
             }
 
-            if(process.waitFor() == 0 && itWasOk) {
+            if(!out.toString().isEmpty()) {
+                notification = GROUP_DISPLAY_CONSOLE_INFO.createNotification(out.toString(), NotificationType.INFORMATION);
+                Notifications.Bus.notify(notification, projects[0]);
+            }
+
+            out = new StringBuilder();
+
+            process.waitFor();
+
+            if(mode.equals("action") && itWasOk) {
                 prefix = "[OK]";
-                System.out.println("Success");
-            } else {
+            } else if(itWasOk) {
+                int childs = node.getChildCount();
+                for (int i=0; i<childs; i++) {
+                    DefaultMutableTreeNode childnode = (DefaultMutableTreeNode)node.getChildAt(i);
+                    TestNode testnode = (TestNode)childnode.getUserObject();
+                    if(passed.contains(testnode.payload + ":test" + testnode.title)) {
+                        testnode.prefix = "[OK]";
+                        prefix = "[OK]";
+                    } else if(failed.contains(testnode.payload + ":test" + testnode.title)) {
+                        testnode.prefix = "[ERR]";
+                        prefix = "[ERR]";
+                    } else {
+                        testnode.prefix = "[ERR]";
+                        prefix = "[ERR]";
+                    }
+                }
+            } else  {
                 prefix = "[ERR]";
             }
-            notification = GROUP_DISPLAY_ID_INFO.createNotification(out.toString(), NotificationType.ERROR);
+            notification = GROUP_DISPLAY_CONSOLE_INFO.createNotification(prefix, NotificationType.INFORMATION);
             Notifications.Bus.notify(notification, projects[0]);
-
         } catch (Exception e) {
             prefix = "[ERR]";
-            Notification notification = GROUP_DISPLAY_ID_INFO.createNotification(e.toString(), NotificationType.ERROR);
+            Notification notification = GROUP_DISPLAY_CONSOLE_INFO.createNotification(e.toString(), NotificationType.ERROR);
             Notifications.Bus.notify(notification, projects[0]);
         }
         return payload;

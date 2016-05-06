@@ -4,17 +4,31 @@ import com.intellij.openapi.project.impl.ProjectManagerImpl;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import java.io.BufferedReader;
 import java.io.File;
 import java.awt.*;
+import java.io.FileReader;
+import java.util.regex.Pattern;
 
 class TreeWorker {
 
-    static void runSelected(JTree jtree)
+    static void runSelected(JTree jtree, JComponent sender)
     {
+        sender.setEnabled(false);
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode)jtree.getLastSelectedPathComponent();
-        String suite = jtree.getSelectionPath().getPathComponent(1).toString();
+        DefaultMutableTreeNode suitenode = (DefaultMutableTreeNode)jtree.getSelectionPath().getPathComponent(1);
+        TestNode suiteTestNode = (TestNode)suitenode.getUserObject();
         TestNode node = (TestNode)selectedNode.getUserObject();
-        node.React(suite);
+        Thread reactThread = new Thread(() -> {
+            try {
+                node.React(suiteTestNode.getTitle(), selectedNode);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            sender.setEnabled(true);
+        });
+        reactThread.setDaemon(true);
+        reactThread.start();
     }
 
     static void refreshData(JTree jtree)
@@ -23,19 +37,30 @@ class TreeWorker {
         if(project.getBasePath() == null) {
             return;
         }
-        File baseDir = new File(project.getBasePath());
-        File ymlMain = new File(".");
-        File testDir = DirWorker.findDirectory(baseDir, "tests", null);
-        TestNode tRoot = new TestNode(testDir.getName(), MyIcons.FOLDER_ICON, testDir, null, null);
+        File projectDir = new File(project.getBasePath());
+        File codeceptYmlFile = DirWorker.findFile(projectDir, "codeception.yml", null);
 
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode(tRoot);
-        File[] files = testDir.getParentFile().listFiles();
-        for(File file : files != null ? files : new File[0]) {
-            if(file.getName().equals("codeception.yml")) {
-                ymlMain = file;
+        String testsFolder = "";
+
+        try(BufferedReader br = new BufferedReader(new FileReader(codeceptYmlFile))) {
+            for (String line; (line = br.readLine()) != null; ) {
+                if (line.contains("tests:")) {
+                    testsFolder = line.replace("tests:", "").trim();
+                    if(testsFolder.startsWith("/")) {
+                        testsFolder = testsFolder.replaceFirst("/", "");
+                    }
+                    break;
+                }
             }
+        } catch (Exception ex) {
+            return;
         }
-        root = DirWorker.getDirContent(testDir, root, testDir, ymlMain);
+        if(testsFolder.isEmpty()) {
+            return;
+        }
+        File testDir = new File(codeceptYmlFile.getParentFile().getAbsolutePath() + "/" + testsFolder);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode(new TestNode("ROOT", null, null, null, null));
+        root = DirWorker.getDirContent(testDir, root, testDir, codeceptYmlFile);
         jtree.setModel(new DefaultTreeModel(root));
     }
 }
