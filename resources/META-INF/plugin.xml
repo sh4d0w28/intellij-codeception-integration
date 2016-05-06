@@ -4,16 +4,22 @@
   <version>1.0.2</version>
   <vendor email="vfrcbvrf2005@gmail.com" url="http://www.linkedin.com/in/edush"></vendor>
 
-  <description><![CDATA[First version of plugin. Allow to get test suites and run tests on simple click]]></description>
-f
-  <change-notes><![CDATA[-]]>
+  <description><![CDATA[
+  Codecept integration plugin. Allow to retrieve test suites and run tests on simple button click.
+  ]]></description>
+
+  <change-notes><![CDATA[
++ added file opener on doubleclick for tests
++ fixed errors on hierarchy run
++ setup daemon for processBuilder
+]]>
   </change-notes>
 
   <idea-version since-build="141.0"/>
   <depends>com.intellij.modules.lang</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <toolWindow id="FormMain" anchor="right" factoryClass="FormMain"/>
+    <toolWindow id="Codecept Form" anchor="right" factoryClass="FormMain"/>
   </extensions>
 
   <actions>
