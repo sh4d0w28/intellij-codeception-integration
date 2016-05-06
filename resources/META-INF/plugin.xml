@@ -1,7 +1,7 @@
 <idea-plugin version="2">
   <id>com.sh4d0w28.intellij_codeception_integration</id>
   <name>Codecept integration plugin</name>
-  <version>1.0</version>
+  <version>1.0.2</version>
   <vendor email="vfrcbvrf2005@gmail.com" url="http://www.linkedin.com/in/edush"></vendor>
 
   <description><![CDATA[First version of plugin. Allow to get test suites and run tests on simple click]]></description>

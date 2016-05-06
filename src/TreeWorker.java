@@ -12,15 +12,23 @@ import java.util.regex.Pattern;
 
 class TreeWorker {
 
-    static void runSelected(JTree jtree)
+    static void runSelected(JTree jtree, JComponent sender)
     {
+        sender.setEnabled(false);
         DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode)jtree.getLastSelectedPathComponent();
-
         DefaultMutableTreeNode suitenode = (DefaultMutableTreeNode)jtree.getSelectionPath().getPathComponent(1);
         TestNode suiteTestNode = (TestNode)suitenode.getUserObject();
-
         TestNode node = (TestNode)selectedNode.getUserObject();
-        node.React(suiteTestNode.getTitle(), selectedNode);
+        Thread reactThread = new Thread(() -> {
+            try {
+                node.React(suiteTestNode.getTitle(), selectedNode);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            sender.setEnabled(true);
+        });
+        reactThread.setDaemon(true);
+        reactThread.start();
     }
 
     static void refreshData(JTree jtree)
